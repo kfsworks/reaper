@@ -1,119 +1,73 @@
+/*
+ * libusb example program to list devices on the bus
+ * Copyright © 2007 Daniel Drake <dsd@gentoo.org>
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+ */
 
 #include <stdio.h>
 
 #include "libusb.h"
 
-void print_endpoint(struct usb_endpoint_descriptor *endpoint)
+static void print_devs(libusb_device **devs)
 {
-  printf(" bEndpointAddress: %02xh\n", endpoint->bEndpointAddress);
-  printf(" bmAttributes: %02xh\n", endpoint->bmAttributes);
-  printf(" wMaxPacketSize: %d\n", endpoint->wMaxPacketSize);
-  printf(" bInterval: %d\n", endpoint->bInterval);
-  printf(" bRefresh: %d\n", endpoint->bRefresh);
-  printf(" bSynchAddress: %d\n", endpoint->bSynchAddress);
+	libusb_device *dev;
+	int i = 0, j = 0;
+	uint8_t path[8]; 
+
+	while ((dev = devs[i++]) != NULL) {
+		struct libusb_device_descriptor desc;
+		int r = libusb_get_device_descriptor(dev, &desc);
+		if (r < 0) {
+			fprintf(stderr, "failed to get device descriptor");
+			return;
+		}
+
+		printf("%04x:%04x (bus %d, device %d)",
+			desc.idVendor, desc.idProduct,
+			libusb_get_bus_number(dev), libusb_get_device_address(dev));
+
+		r = libusb_get_port_numbers(dev, path, sizeof(path));
+		if (r > 0) {
+			printf(" path: %d", path[0]);
+			for (j = 1; j < r; j++)
+				printf(".%d", path[j]);
+		}
+		printf("\n");
+	}
 }
-
-
-void print_altsetting(struct usb_interface_descriptor *interface)
-{
-  int i;
-
-  printf(" bInterfaceNumber: %d\n", interface->bInterfaceNumber);
-  printf(" bAlternateSetting: %d\n", interface->bAlternateSetting);
-  printf(" bNumEndpoints: %d\n", interface->bNumEndpoints);
-  printf(" bInterfaceClass: %d\n", interface->bInterfaceClass);
-  printf(" bInterfaceSubClass: %d\n", interface->bInterfaceSubClass);
-  printf(" bInterfaceProtocol: %d\n", interface->bInterfaceProtocol);
-  printf(" iInterface: %d\n", interface->iInterface);
-
-  for (i = 0; i < interface->bNumEndpoints; i++)
-    print_endpoint(&interface->endpoint[i]);
-}
-
-
-void print_interface(struct usb_interface *interface)
-{
-  int i;
-
-  for (i = 0; i < interface->num_altsetting; i++)
-    print_altsetting(&interface->altsetting[i]);
-}
-
-
-void print_configuration(struct usb_config_descriptor *config)
-{
-  int i;
-
-  printf(" wTotalLength: %d\n", config->wTotalLength);
-  printf(" bNumInterfaces: %d\n", config->bNumInterfaces);
-  printf(" bConfigurationValue: %d\n", config->bConfigurationValue);
-  printf(" iConfiguration: %d\n", config->iConfiguration);
-  printf(" bmAttributes: %02xh\n", config->bmAttributes);
-  printf(" MaxPower: %d\n", config->MaxPower);
-
-  for (i = 0; i < config->bNumInterfaces; i++)
-    print_interface(&config->interface[i]);
-}
-
 
 int main(void)
 {
-  struct usb_bus *bus;
-  struct usb_device *dev;
+	libusb_device **devs;
+	int r;
+	ssize_t cnt;
 
-  usb_init();
-  usb_find_busses();
-  usb_find_devices();
+	r = libusb_init(NULL);
+	if (r < 0)
+		return r;
 
-  printf("bus/device idVendor/idProduct\n");
+	cnt = libusb_get_device_list(NULL, &devs);
+	if (cnt < 0){
+		libusb_exit(NULL);
+		return (int) cnt;
+	}
 
-  for (bus = usb_busses; bus; bus = bus->next) {
-    for (dev = bus->devices; dev; dev = dev->next) {
-      int ret, i;
-      char string[256];
-      usb_dev_handle *udev;
+	print_devs(devs);
+	libusb_free_device_list(devs, 1);
 
-      printf("%s/%s %04X/%04X\n", bus->dirname, dev->filename,
-          dev->descriptor.idVendor, dev->descriptor.idProduct);
-
-      udev = usb_open(dev);
-      if (udev) {
-        if (dev->descriptor.iManufacturer) {
-          ret = usb_get_string_simple(udev, dev->descriptor.iManufacturer, string, sizeof(string));
-          if (ret > 0)
-            printf("- Manufacturer : %s\n", string);
-          else
-            printf("- Unable to fetch manufacturer string\n");
-        }
-
-        if (dev->descriptor.iProduct) {
-          ret = usb_get_string_simple(udev, dev->descriptor.iProduct, string, sizeof(string));
-          if (ret > 0)
-            printf("- Product : %s\n", string);
-          else
-            printf("- Unable to fetch product string\n");
-        }
-
-        if (dev->descriptor.iSerialNumber) {
-          ret = usb_get_string_simple(udev, dev->descriptor.iSerialNumber, string, sizeof(string));
-          if (ret > 0)
-            printf("- Serial Number: %s\n", string);
-          else
-            printf("- Unable to fetch serial number string\n");
-        }
-
-        usb_close (udev);
-      }
-
-      if (!dev->config) {
-        printf(" Couldn't retrieve descriptors\n");
-        continue;
-      }
-
-      for (i = 0; i < dev->descriptor.bNumConfigurations; i++)
-        print_configuration(&dev->config[i]);
-    }
-  }
-
-  return 0;
+	libusb_exit(NULL);
+	return 0;
 }

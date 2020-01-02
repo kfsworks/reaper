@@ -15,15 +15,36 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # CMAKE_PREFIX_PATH
 
+find_package(PkgConfig)
+pkg_check_modules(libusb-1.0 REQUIRED libusb-1.0)
+
 find_path(LIBUSB_INCLUDE_DIR
   NAMES libusb.h
-  PATH_SUFFIXES "include" "libusb" "libusb-1.0"
+  PATHS
+    /usr
+    /usr/local
+    /opt
+    "${CMAKE_BINARY_DIR}\\include"
+    PATH_SUFFIXES libusb-1.0
 )
+#message(${LIBUSB_INCLUDE_DIR})
+
+include_directories("${LIBUSB_INCLUDE_DIR}")
+#include_directories(include)
+#include_directories(src/mingw)
 
 find_library(LIBUSB_LIBRARY
-  NAMES usb
-  PATH_SUFFIXES "lib" "lib32" "lib64"
+  NAMES usb-1.0
+  PATHS
+    /usr
+    /usr/local
+    /opt
+    "${CMAKE_BINARY_DIR}/MS64/static"
+    "${CMAKE_BINARY_DIR}/MS64/dll"
 )
+#message("CMAKE_BINARY_DIR: ${CMAKE_BINARY_DIR}")
+#message("LIBUSB_LIBRARY: ${LIBUSB_LIBRARY}")
+#message("PROJECT_NAME: ${PROJECT_NAME}")
 
 # set(CMAKE_VERBOSE_MAKEFILE ON)
 
@@ -42,6 +63,4 @@ add_executable(reaper
   src/main.cpp
 )
 
-target_include_directories(reaper LIBUSB_INCLUDE_DIR)
-target_link_libraries(reaper LIBUSB_LIBRARY)
-#target_link_libraries(cpp_demo cheeseburgerlib)
+target_link_libraries(${PROJECT_NAME} ${LIBUSB_LIBRARY})
