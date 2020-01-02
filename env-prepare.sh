@@ -1,3 +1,1 @@
-mkdir -p build/default
-mkdir include
-mkdir src
+mkdir -p build/default include src
