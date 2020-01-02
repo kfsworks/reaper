@@ -47,11 +47,18 @@ find_library(LIBUSB_LIBRARY
 #message("PROJECT_NAME: ${PROJECT_NAME}")
 
 # set(CMAKE_VERBOSE_MAKEFILE ON)
+file(GLOB REAPER_SOURCES_XX RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}
+  include/*.hpp
+  src/*.cpp
+)
 
-#add_library(cheeseburgerlib
-#  include/random_generator.hpp
-#  src/random_generator.cpp
+#set(REAPER_SOURCES_XX
+#  ${REAPER_SOURCES_XX}
+#  ${CMAKE_CURRENT_BINARY_DIR}/include/.hpp
 #)
+
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}/include")
+add_library(libreaper STATIC ${REAPER_SOURCES_XX})
 
 #target_include_directories(
 #  cheeseburgerlib
@@ -63,4 +70,5 @@ add_executable(reaper
   src/main.cpp
 )
 
-target_link_libraries(${PROJECT_NAME} ${LIBUSB_LIBRARY})
+target_link_libraries(${PROJECT_NAME} ${LIBUSB_LIBRARY} libreaper)
+#target_link_libraries(${PROJECT_NAME} ${LIBUSB_LIBRARY})
