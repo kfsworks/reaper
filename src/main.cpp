@@ -1,6 +1,7 @@
 #include <stdio.h>
+#include <iostream>
 //#include "libusb.h"
-#include "../include/usb_device.hpp"
+#include "../include/usb_system.hpp"
 
 /*static void print_devs(libusb_device **devs)
 {
@@ -31,7 +32,8 @@
 }*/
 
 int main(void) {
-  USBDevice a;
+  USBSystem a;
+  std::cout << "hi" << std::endl;
   /*
 	libusb_device **devs;
 	int r;

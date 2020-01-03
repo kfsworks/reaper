@@ -1,10 +1,10 @@
-#include "usb_device.hpp"
+#include "usb_system.hpp"
 
-USBDevice::USBDevice() {
+USBSystem::USBSystem() {
   //LIBUSB_SUCCESS
   int r = libusb_init(nullptr);
 }
 
-USBDevice::~USBDevice() {
+USBSystem::~USBSystem() {
   libusb_exit(nullptr);
 }
