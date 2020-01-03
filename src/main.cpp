@@ -1,7 +1,8 @@
 #include <stdio.h>
-#include "libusb.h"
+//#include "libusb.h"
+#include "../include/usb_device.hpp"
 
-static void print_devs(libusb_device **devs)
+/*static void print_devs(libusb_device **devs)
 {
 	libusb_device *dev;
 	int i = 0, j = 0;
@@ -27,10 +28,11 @@ static void print_devs(libusb_device **devs)
 		}
 		printf("\n");
 	}
-}
+}*/
 
-int main(void)
-{
+int main(void) {
+  USBDevice a;
+  /*
 	libusb_device **devs;
 	int r;
 	ssize_t cnt;
@@ -49,5 +51,6 @@ int main(void)
 	libusb_free_device_list(devs, 1);
 
 	libusb_exit(NULL);
+  */
 	return 0;
 }
