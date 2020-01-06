@@ -7,6 +7,7 @@ class USBSystem {
   public:
     USBSystem();
     ~USBSystem();
+
 };
 
 #endif // USB_SYSTEM_H_
