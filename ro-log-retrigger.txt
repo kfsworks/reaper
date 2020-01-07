@@ -4,57 +4,60 @@
 //rlsUtil.genLogSheet(start.getDate());
 
 /*
-genFileSysId - get sys id from the path : wwsasia.ap.manulife.com/mam?id=mam_finance_reports_view&table=u_mam_wo_generated_files&sys_id=0ce4082edb46c850ba5073278c9619c3
-
-goto sys_attachment.list
-search genFileSysId from Table sys ID
-attachmentSysId: sysid for this record,
-attachmentFileName: Filename from this record
+recid - get sys id from the path : wwsasia.ap.manulife.com/mam?id=mam_finance_reports_view&table=u_mam_wo_generated_files&sys_id=0ce4082edb46c850ba5073278c9619c3
 */
 
-	var roAppUtil = new global.MAMRoApprovalItemsUtil();
-	var batchNum = roAppUtil.getBatchNumber();
-	var fileType = 'RO Log Sheet';
-	var genFileSysId = '0ce4082edb46c850ba5073278c9619c3';
-	var statuPendingDecrypt = '4';
-	
-	gs.info('BR: RO Log Sheet Notify API to Decrypt: started: ' + genFileSysId);
-	
-	var grGr = new GlideRecord('u_mam_wo_generated_files');
-	grGr.get(genFileSysId);
-	gs.info('BR: RO Log Sheet Notify API to Decrypt: sys_id: ' + grGr.sys_id);
+function getAttachmentInfo(recid) {
+  var grAtt = new GlideRecord('sys_attachment');
+  grAtt.addQuery('table_sys_id', recid);
+  grAtt.addQuery('table_name', 'u_mam_wo_generated_files');
+  grAtt.query();
+  if (grAtt.next()) {
+    return grAtt;
+  }
+  return null;
+}
 
+function triggerIt(att) {
+  var genFileSysId = att.getValue('table_sys_id').toString();
+  var fileType = 'RO Log Sheet'; var statuPendingDecrypt = '4';
+  var roAppUtil = new global.MAMRoApprovalItemsUtil();
+  var batchNum = roAppUtil.getBatchNumber();
+  var grGr = new GlideRecord('u_mam_wo_generated_files');
+  grGr.get(genFileSysId);
+  gs.info('BR: RO Log Sheet Notify API to Decrypt: genFileSysId='+genFileSysId+' ,sys_id='+grGr.sys_id);
+  if (grGr.sys_id) {
+    gs.info('BR: RO Log Sheet Notify API to Decrypt: status: ' + grGr.getValue('u_status') + ', ' + grGr.getValue('u_file'));
+    if (grGr.getValue('u_status')==statuPendingDecrypt && grGr.getValue('u_file')==fileType ) {
+      var country = grGr.u_country.u_name.toString();
+      var fileNumber = grGr.u_number.toString();
+      var post_data = {
+        country: country,
+        number: fileNumber,
+        batch: batchNum,
+        fileType: fileType,
+        genFileSysId: genFileSysId,
+        attachmentSysId: att.getValue('sys_id').toString(),
+        attachmentFileName: att.getValue('file_name').toString()
+      };
+      var req_str = JSON.stringify(post_data);
+      gs.info('BR: RO Log Sheet Notify API to Decrypt: \n' + req_str);
+      var _log_prefix = '@@@ [@@@ [/api/rugl/mam/DocumentManagement/UpdateROLogSheet] ' + gs.getUserName() + '\n';
+      var tstamps = {};
+      var tstamps_server_received = new DateTimeUtils().localTimeStampMsec();
+      var timeout = 10000;
+      var restUtil = new global.MAMRestUtil();
+      restUtil.tstamps.server_received = tstamps_server_received;
+      var reply_obj = restUtil.getResults('global.DocumentManagement_UpdateROLogSheet', req_str, _log_prefix, timeout);
+      gs.info( ' output: \n' + reply_obj.response_body );
+    }
+  }
+}
 
-	if (grGr.sys_id) {
-		gs.info('BR: RO Log Sheet Notify API to Decrypt: status: ' + grGr.getValue('u_status') + ', ' + grGr.getValue('u_file'));
-		if (grGr.getValue('u_status')==statuPendingDecrypt && grGr.getValue('u_file')==fileType ) {
-gs.info('BR: herere: ');
-			var country = grGr.u_country.u_name.toString();
-			var fileNumber = grGr.u_number.toString();
-
-			var post_data = {
-				country: country,
-				number: fileNumber,
-				batch: batchNum,
-				fileType: fileType,
-				genFileSysId: genFileSysId,
-				attachmentSysId: '40e4082edb46c850ba5073278c9619c4',
-				attachmentFileName: 'NoCustomerNames_RoLogSheet.20200102235008.csv'
-			};
-			var req_str = JSON.stringify(post_data);
-			gs.info('BR: RO Log Sheet Notify API to Decrypt: \n' + req_str);
-			
-			
-			var _debug = true;
-			var _log_prefix = '@@@ [@@@ [/api/rugl/mam/DocumentManagement/UpdateROLogSheet] ' + gs.getUserName() + '\n';
-			var tstamps = {};
-			var tstamps_server_received = new DateTimeUtils().localTimeStampMsec();
-
-			var timeout = 10000; 
-			var restUtil = new global.MAMRestUtil();
-			restUtil.tstamps.server_received = tstamps_server_received;
-			var reply_obj = restUtil.getResults('global.DocumentManagement_UpdateROLogSheet', req_str, _log_prefix, timeout);
-			gs.info( ' output: \n' + reply_obj.response_body );
-
-		}
-	}
+var recid = '0e3b6837db8a801030d592d8db961994';
+var att = getAttachmentInfo(recid);
+if (att) {
+  triggerIt(att);
+} else {
+  gs.log('recid not found');
+}
